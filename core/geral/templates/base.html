@@ -1,71 +1,12 @@
 {% load staticfiles %}
-<!DOCTYPE HTML>
-<html lang="pt-BR">
+<!DOCTYPE html>
+<html>
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-
-	<title>Titulo</title>
-	<link rel="icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
-	<link rel="shortcut icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
-
-	<link href='http://fonts.googleapis.com/css?family=Cabin:400,500,600,700,400italic,500italic,600italic,700italic' rel='stylesheet' type='text/css'>
-	<link href="{% static 'css/grid.css' %}" rel="stylesheet" type="text/css">
-	<link href="{% static 'css/comum.css' %}" rel="stylesheet" type="text/css">
-	<link href="{% static 'css/responsivo.css' %}" rel="stylesheet" type="text/css">
-	{% block css %}{% endblock %}
-
-	{% block js %}{% endblock %}
-
-	<!--[if lt IE 9]>
-	   <script type="text/javascript" src="{{ STATIC_URL }}js/cria-elemento.js"></script>
-	   <link href="{{ STATIC_URL }}css/ie.css" rel="stylesheet" type="text/css">
-	<![endif]-->
-
-	<!--[if IE 7]>
-	   <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/ie7.css">
-	<![endif]-->
+    <title></title>
+    <link type="text/css" rel="stylesheet" href="{% static "css/comum.css" %}" />
+    <script type="application/javascript" src="{% static "js/comum.js" %}"></script>
 </head>
 <body>
-	{% block header %}
-		<header id="Header" class="clearfix">
-			<div class="container_960">
-
-				{% include "includes/header.html" %}
-
-			</div>
-		</header>
-	{% endblock %}
-
-	<main id="Conteudo" class="clearfix">
-		{% block conteudo %}
-
-		{% endblock %}
-	</main><!-- #Conteudo -->
-
-	{% block footer %}
-		<div id="Footer" class="fix">
-			{% include "includes/footer.html" %}
-		</div><!-- #Footer -->
-	{% endblock %}
-
-	{% block modal %}
-    	
-    {% endblock %}
-
-	{% if messages %}
-		<script type="text/javascript">
-			classe = "{{ message.tags }}";
-			lnk = undefined;
-			titulo = "Mensagem";
-			texto = "{% for message in messages %}{{ message }} <br />{% endfor %}";
-			botao1 = undefined;
-			botao2 = undefined;
-			alertaBox(classe, lnk, titulo, texto, botao1, botao2);
-			fechaAlertaTime();
-		</script>
-
-	{% endif %}
-
+<h1>Projeto configurado!</h1>
 </body>
 </html>
