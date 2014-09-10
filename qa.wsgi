@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath(PROJECT_ROOT_DIR))
 sys.path.insert(0, SITE_PACKAGES)
 
 # INFRA: A string 'geral.settings' deve ser substituida pelo 'path' (substituindo / por . e removendo o .py)
-#        do arquivo settings.py em relação ao PROJECT_ROOT_DIR.
+#        do arquivo settings.py em relacao ao PROJECT_ROOT_DIR.
 #
 #        Exemplo:
 #	     A estrutura abaixo
