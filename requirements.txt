@@ -1,4 +1,4 @@
-Django==1.6.5
+Django==1.7
 MySQL-python==1.2.5
 Pillow==2.5.1
 django-appconf==0.6
@@ -7,7 +7,6 @@ django-imagekit==3.2.2
 pilkit==1.1.9
 six==1.7.3
 wsgiref==0.1.2
-South==1.0
 
 # Caso receba o erro abaixo no MacOS X Mavericks ao instalar o MySQL-python:
 # EnvironmentError: mysql_config not found
