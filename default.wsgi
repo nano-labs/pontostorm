@@ -29,5 +29,15 @@ sys.path.insert(0, SITE_PACKAGES)
 #        Resultaria no valor 'aplicativo.settings'
 os.environ['DJANGO_SETTINGS_MODULE'] = 'geral.settings'
 
-import django.core.handlers.wsgi
-application = django.core.handlers.wsgi.WSGIHandler()
+# =================================================================
+# Trecho substituido segundo a fonte: 
+# http://stackoverflow.com/questions/26276397/django-1-7-upgrade-error-appregistrynotready-apps-arent-loaded-yet
+
+# DE:
+#import django.core.handlers.wsgi
+#application = django.core.handlers.wsgi.WSGIHandler()
+
+# PARA:
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()
+# =================================================================
