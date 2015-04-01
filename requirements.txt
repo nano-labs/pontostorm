@@ -2,7 +2,7 @@ Django==1.7
 MySQL-python==1.2.5
 Pillow==2.5.1
 django-appconf==0.6
-django-grappelli==2.5.3
+django-grappelli==2.6.4
 django-imagekit==3.2.2
 pilkit==1.1.9
 six==1.7.3
