@@ -48,7 +48,8 @@ INSTALLED_APPS = (
     'django.contrib.admin',
 
     'geral',
-    'utils'
+    'utils',
+    'ponto'
 )
 
 MIDDLEWARE_CLASSES = (

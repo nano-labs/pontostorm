@@ -1,0 +1,52 @@
+Ponto Eletrônico
+	- Parse do XLS do Seculum
+	- Parse da tabela de funcionários
+	- Modelar banco
+		- Tabela de funcionarios
+			Nome, PIS/PASEP, CTPS, Função, Departamento, Admissão, Jornada, usuário
+		- Tabela de jornada de trabalho
+			Segunda - entrada, almoco, volta, saida
+			Terça - ...
+			...
+		- Tabela de batidas de ponto (dia vigente)
+			Dia vigente, funcionario, tipo (util, folga, falta, etc), permanencias, comentários, anexos (file upload de atestados etc)
+		- Tabela de permanencias
+			Dia, entrada, saida, entrada_manual, saida_manual
+		- Tabela de feriados
+			Data, Descrição
+	- Relatórios
+		- Saldo final: Funcionário x Mês
+		- Funcionario x Saldo, Horas pagas, Dias compensados, Faltas, Taxi, Alimentação
+		- Por funcionario: Dia x Entrada, saida, entrada, saida, Horas trabalhadas, Saldo, Banco de horas, Faltas cumulativas
+
+	- Features
+		- Cada funcionario é vinculado (ou não) a um usuário do sistema permitindo que o funcionário acesse seus proprios relatórios com login
+		- Funcionário pode fazer upload de anexos para justificar ausencias, etc
+		- Problemas, inconcistências, excesso de faltas ou horas extras serão notificadas ao funcionario por email
+		- É possível definir hierarquia (m2m) entre funcionários para que um nivel acima possa acessar os relatorios de todos os niveis abaixo (cascade)
+		- Nivel ADM pode acessar qualquer relatário
+		- Nivel ADM pode alterar entradas e saidas de qualquer funcionario
+		- Agrupar funcionarios em times/equipes e permitir relatórios por time/equipe
+
+	- Atributos:
+		Funcionário:
+			- Saldo atual
+			- Saldo no periodo
+			- Total de faltas/presenças (%) atual
+			- Total de faltas/presenças (%) no periodo
+			- horario médio de entrada (desvio padrao) e horario médio de saida (desvio padrao) atual
+			- horario médio de entrada (desvio padrao) e horario médio de saida (desvio padrao) no periodo
+			- Horas trabalhadas/horas esperadas (%) atual
+			- Horas trabalhadas/horas esperadas (%) no periodo
+			* "no periodo" quer dizer que a função sempre recebe inicio e fim, sendo o default (atual) o periodo máximo possivel
+		Dia vigente:
+			- É feriado
+			- É fim de semana
+			- Tempo esperado de trabalho hoje (cruzar com feriados, fim de semana, tipo)
+			- Saldo desde X até hoje
+			- Faltas desde X até hoje
+			- Presenças desde X até hoje
+			- Horas trabalhadas desde X até hoje
+			- Horas esperadas desde X até hoje
+			* hoje == self
+			* sempre referente ao funcionario
