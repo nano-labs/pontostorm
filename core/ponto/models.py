@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 from django.contrib.auth.models import User
 from django.db import models
 
+from importador.models import le_planilha_funcionarios
 from utils.models import BaseModel
 
 JORNADA_PADRAO = 8
@@ -15,8 +16,10 @@ def format_minutes(minutes, format_string):
     Converte um tempo de total de minutos para string.
 
     Ex:
-    >>>
+    >>> format_minutes(121, "%H:%M:%S")
+    >>> "00:02:01"
     """
+    pass
 
 
 class Departamento(BaseModel):
@@ -53,9 +56,10 @@ class Funcionario(BaseModel):
     data_admissao = models.DateField("Data de Admissão")
     usuario = models.OneToOneField(User, on_delete=models.CASCADE, null=True,
                                    verbose_name="Usuario de acesso",
-                                   related_name="funcionario")
+                                   related_name="funcionario", blank=True)
 
     # Jornada de trabalho
+    # TODO: Pensar numa forma melhor de gerenciar isso
     segunda = models.PositiveSmallIntegerField("Segunda Feira",
                                                default=JORNADA_PADRAO)
     terca = models.PositiveSmallIntegerField("Terça Feira",
@@ -68,6 +72,73 @@ class Funcionario(BaseModel):
                                              default=JORNADA_PADRAO)
     sabado = models.PositiveSmallIntegerField("Sábado", default=0)
     domingo = models.PositiveSmallIntegerField("Domingo", default=0)
+
+    @classmethod
+    def importar_planilha(cls, arquivo):
+        """Importa a planilha de funcionarios e atualiza a tabela."""
+        # .
+        def get_departamento(nome):
+            u"""Retorna uma instância de Departamento."""
+            return Departamento.objects.get_or_create(nome=nome)[0]
+
+        funcionarios = le_planilha_funcionarios(arquivo)
+        for funcionario in funcionarios:
+            f = cls.objects.get_or_none(pis=funcionario["pis"])
+            if not f:
+                f = cls()
+            f.pis = funcionario["pis"]
+            f.nome = funcionario["nome"]
+            f.ctps = funcionario["ctps"]
+            f.funcao = funcionario["funcao"]
+            f.data_admissao = funcionario["data_admissao"]
+
+            f.departamento = get_departamento(funcionario["departamento"])
+            f.save()
+
+    def tempo_trabalhado(self, inicio=None, fim=None):
+        u"""
+        Retorna o total de tempo trabalhado, em minutos, no período.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+
+        Caso não seja informado 'fim' será considerado o periodo até sua última
+        entrada no sistema.
+        """
+        # TODO
+        pass
+
+    def tempo_esperado(self, inicio=None, fim=None):
+        u"""
+        Retorna o total de tempo esperado de trabalho, em minutos, no período.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+
+        Caso não seja informado 'fim' será considerado o periodo até sua última
+        entrada no sistema.
+        """
+        # TODO
+        pass
+
+    def disponibilidade(self, inicio=None, fim=None):
+        u"""
+        Retorna o tempo trabalhado, esperado e disponibilidade no período.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+
+        Caso não seja informado 'fim' será considerado o periodo até sua última
+        entrada no sistema.
+        """
+        trabalhado = self.tempo_trabalhado(inicio, fim)
+        esperado = self.tempo_esperado(inicio, fim)
+        disponibilidade = 0.0
+        if esperado > 0:
+            disponibilidade = trabalhado / float(esperado)
+        return {"trabalhado": trabalhado,
+                "esperado": esperado,
+                "disponibilidade": disponibilidade}
 
     def saldo(self, inicio=None, fim=None):
         u"""
@@ -82,17 +153,83 @@ class Funcionario(BaseModel):
         # TODO
         pass
 
+    def faltas(self, inicio=None, fim=None):
+        u"""
+        Retorna o total de faltas do funcionário no período.
 
-            - Saldo atual
-            - Saldo no periodo
-            - Total de faltas/presenças (%) atual
-            - Total de faltas/presenças (%) no periodo
-            - horario médio de entrada (desvio padrao) e horario médio de saida (desvio padrao) atual
-            - horario médio de entrada (desvio padrao) e horario médio de saida (desvio padrao) no periodo
-            - Horas trabalhadas/horas esperadas (%) atual
-            - Horas trabalhadas/horas esperadas (%) no periodo
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
 
+        Caso não seja informado 'fim' será considerado o periodo até sua última
+        entrada no sistema.
+        """
+        # TODO
+        pass
 
+    def presencas(self, inicio=None, fim=None):
+        u"""
+        Retorna o total de presenças do funcionário no período.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+
+        Caso não seja informado 'fim' será considerado o periodo até sua última
+        entrada no sistema.
+        """
+        # TODO
+        pass
+
+    def assiduidade(self, inicio=None, fim=None):
+        u"""
+        Retorna a assiduidade do funcionario no período.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+
+        Caso não seja informado 'fim' será considerado o periodo até sua última
+        entrada no sistema.
+        """
+        presencas = self.presencas(inicio, fim)
+        faltas = self.faltas(inicio, fim)
+        total = presencas + faltas
+        assiduidade = 0.0
+        if total > 0:
+            assiduidade = presencas / float(total)
+        return {"presencas": trabalhado,
+                "faltas": esperado,
+                "total": total,
+                "assiduidade": assiduidade}
+
+    def entrada_media(self, inicio=None, fim=None):
+        u"""
+        Retorna a hora media e desvio padrão de entrada no período.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+
+        Caso não seja informado 'fim' será considerado o periodo até sua última
+        entrada no sistema.
+        """
+        # TODO
+        pass
+
+    def saida_media(self, inicio=None, fim=None):
+        u"""
+        Retorna a hora media e desvio padrão de saída no período.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+
+        Caso não seja informado 'fim' será considerado o periodo até sua última
+        entrada no sistema.
+        """
+        # TODO
+        pass
+
+    def expediente_esperado(self, dia):
+        """Retorna o tempo, em minutos, de expediente esperado neste dia."""
+        # TODO
+        pass
 
     def __unicode__(self):
         u"""Unicode para exibição do usuário."""
@@ -127,6 +264,86 @@ class Ponto(BaseModel):
     observacoes = models.TextField("Observações", blank=True, null=True)
     # anexos
     # permanencias
+
+    @property
+    def is_weekend(self):
+        u"""Boleano que informa se este dia é ou não fim de semana."""
+        # TODO
+        pass
+
+    @property
+    def is_holiday(self):
+        u"""Boleano que informa se este dia é ou não feriado."""
+        # TODO
+        pass
+
+    def expediente_esperado(self):
+        u"""Retorna o tempo, em minutos, de expediente esperado neste dia."""
+        return self.funcionario.expediente_esperado(self.dia)
+
+    def saldo(self, inicio=None):
+        u"""
+        Retorna o saldo de horas, em minutos, do funcionário no período.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+        """
+        return self.funcionario.saldo(inicio, self.dia)
+
+    def faltas(self, inicio=None):
+        u"""
+        Retorna o total de faltas do funcionário até hoje.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+        """
+        return self.funcionario.faltas(inicio, self.dia)
+
+    def presencas(self, inicio=None):
+        u"""
+        Retorna o total de presenças do funcionário até hoje.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+        """
+        return self.funcionario.presencas(inicio, self.dia)
+
+    def tempo_trabalhado(self, inicio=None):
+        u"""
+        Retorna o total de tempo trabalhado, em minutos, no período.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+        """
+        return self.funcionario.tempo_trabalhado(inicio, self.dia)
+
+    def tempo_esperado(self, inicio=None):
+        u"""
+        Retorna o total de tempo esperado de trabalho, em minutos, no período.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+
+        Caso não seja informado 'fim' será considerado o periodo até sua última
+        entrada no sistema.
+        """
+        return self.funcionario.tempo_esperado(inicio, self.dia)
+
+    def disponibilidade(self, inicio=None):
+        u"""
+        Retorna o tempo trabalhado, esperado e disponibilidade no período.
+
+        Caso não seja informado 'inicio' será considerado o periodo desde sua
+        primeira entrada no sistema.
+
+        Caso não seja informado 'fim' será considerado o periodo até sua última
+        entrada no sistema.
+        """
+        return self.funcionario.disponibilidade(inicio, self.dia)
+
+    class Meta:
+        verbose_name = "Registro de ponto"
+        verbose_name_plural = "Registros de ponto"
 
 
 class Permanencias(BaseModel):
