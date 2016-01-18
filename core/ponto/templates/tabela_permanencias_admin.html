@@ -1,0 +1,8 @@
+<table>
+    <tr>
+        {% for p in obj.permanencias.all %}
+        <td>{{p.entrada|date:"H:i"}}</td>
+        <td>{{p.saida|date:"H:i"}}</td>
+        {% endfor %}
+    </tr>
+</table>

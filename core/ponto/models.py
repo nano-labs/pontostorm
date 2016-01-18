@@ -2,13 +2,14 @@
 """Provavelmente o unico mudel do projeto."""
 from __future__ import unicode_literals
 
+from datetime import time
 from django.contrib.auth.models import User
 from django.db import models
 
-from importador.models import le_planilha_funcionarios
+from importador.models import le_planilha_funcionarios, le_planilha_ponto
 from utils.models import BaseModel
 
-JORNADA_PADRAO = 8
+JORNADA_PADRAO = time(8, 0, 0)
 
 
 def format_minutes(minutes, format_string):
@@ -60,23 +61,19 @@ class Funcionario(BaseModel):
 
     # Jornada de trabalho
     # TODO: Pensar numa forma melhor de gerenciar isso
-    segunda = models.PositiveSmallIntegerField("Segunda Feira",
-                                               default=JORNADA_PADRAO)
-    terca = models.PositiveSmallIntegerField("Terça Feira",
-                                             default=JORNADA_PADRAO)
-    quarta = models.PositiveSmallIntegerField("Quarta Feira",
-                                              default=JORNADA_PADRAO)
-    quinta = models.PositiveSmallIntegerField("Quinta Feira",
-                                              default=JORNADA_PADRAO)
-    sexta = models.PositiveSmallIntegerField("Sexta Feira",
-                                             default=JORNADA_PADRAO)
-    sabado = models.PositiveSmallIntegerField("Sábado", default=0)
-    domingo = models.PositiveSmallIntegerField("Domingo", default=0)
+    segunda = models.TimeField("Segunda Feira", default=JORNADA_PADRAO)
+    terca = models.TimeField("Terça Feira", default=JORNADA_PADRAO)
+    quarta = models.TimeField("Quarta Feira", default=JORNADA_PADRAO)
+    quinta = models.TimeField("Quinta Feira", default=JORNADA_PADRAO)
+    sexta = models.TimeField("Sexta Feira", default=JORNADA_PADRAO)
+    sabado = models.TimeField("Sábado", default=time(0, 0, 0))
+    domingo = models.TimeField("Domingo", default=time(0, 0, 0))
 
     @classmethod
     def importar_planilha(cls, arquivo):
         """Importa a planilha de funcionarios e atualiza a tabela."""
-        # .
+        # O codigo abaixo está feio pra burro pois pretendo jogá-lo fora
+        # quando lermos os dados diretamente do relógio de ponto
         def get_departamento(nome):
             u"""Retorna uma instância de Departamento."""
             return Departamento.objects.get_or_create(nome=nome)[0]
@@ -265,6 +262,42 @@ class Ponto(BaseModel):
     # anexos
     # permanencias
 
+    @classmethod
+    def importar_planilha(cls, arquivo):
+        """Le a planilha exportada pelo Seculum e importa os dados."""
+        # O codigo abaixo está feio pra burro pois pretendo jogá-lo fora
+        # quando lermos os dados diretamente do relógio de ponto
+        funcionarios = le_planilha_ponto(arquivo)
+        for f in funcionarios:
+            funcionario = Funcionario.objects.get_or_none(ctps=f["ctps"])
+            if funcionario:
+                funcionario.segunda = f["horarios"]["segunda"]
+                funcionario.terca = f["horarios"]["terca"]
+                funcionario.quarta = f["horarios"]["quarta"]
+                funcionario.quinta = f["horarios"]["quinta"]
+                funcionario.sexta = f["horarios"]["sexta"]
+                funcionario.sabado = f["horarios"]["sabado"]
+                funcionario.domingo = f["horarios"]["domingo"]
+                funcionario.save()
+
+                entradas = f["entradas"]
+                for entrada in entradas:
+                    p = cls()
+                    p.funcionario = funcionario
+                    p.dia = entrada["dia"]
+                    p.save()
+                    if entrada["entradas"][0] and entrada["entradas"][1]:
+                        Permanencia.objects.create(ponto=p, entrada=entrada["entradas"][0],
+                                           saida=entrada["entradas"][1])
+                    if entrada["entradas"][2] and entrada["entradas"][3]:
+                        Permanencia.objects.create(ponto=p, entrada=entrada["entradas"][2],
+                                           saida=entrada["entradas"][3])
+                    if all([entrada["entradas"][0], entrada["entradas"][3],
+                            not entrada["entradas"][1],
+                            not entrada["entradas"][2]]):
+                        Permanencia.objects.create(ponto=p, entrada=entrada["entradas"][0],
+                                           saida=entrada["entradas"][3])
+
     @property
     def is_weekend(self):
         u"""Boleano que informa se este dia é ou não fim de semana."""
@@ -341,12 +374,18 @@ class Ponto(BaseModel):
         """
         return self.funcionario.disponibilidade(inicio, self.dia)
 
+    def __unicode__(self):
+        """Unicode do objeto."""
+        return u"%s - %s" % (self.dia, self.funcionario.nome)
+
     class Meta:
+        ordering = ("-dia", "funcionario__nome")
         verbose_name = "Registro de ponto"
         verbose_name_plural = "Registros de ponto"
+        unique_together = (("funcionario", "dia"),)
 
 
-class Permanencias(BaseModel):
+class Permanencia(BaseModel):
 
     u"""Entrada e saída de um dado funcionario em um dado dia."""
 
