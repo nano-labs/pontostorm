@@ -1,8 +1,8 @@
 <table>
     <tr>
         {% for p in obj.permanencias.all %}
-        <td>{{p.entrada|date:"H:i"}}</td>
-        <td>{{p.saida|date:"H:i"}}</td>
+        <td>{{p.entrada|date:"H:i"}}{% if p.entrada_manual %}*{% endif %}</td>
+        <td>{{p.saida|date:"H:i"}}{% if p.saida_manual %}*{% endif %}</td>
         {% endfor %}
     </tr>
 </table>

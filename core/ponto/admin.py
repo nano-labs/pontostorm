@@ -8,6 +8,8 @@ from django.template import loader
 from ponto.models import (Funcionario, Feriado, Ponto, Departamento,
                           Permanencia, Anexo)
 
+SEMANA = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
+
 
 class PermanenciaInline(admin.TabularInline):
     model = Permanencia
@@ -30,7 +32,8 @@ class PontoAdmin(admin.ModelAdmin):
     permanencias.short_description = u'Permanências'
 
     def dia_calendario(self, obj):
-        return "%s - %s" % (obj.dia.strftime("%d/%m/%Y"), obj.dia.weekday())
+        return "%s - %s" % (obj.dia.strftime("%d/%m/%Y"),
+                            SEMANA[obj.dia.weekday()])
     dia_calendario.short_description = u'Dia'
 
 

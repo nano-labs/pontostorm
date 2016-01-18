@@ -282,6 +282,8 @@ class Ponto(BaseModel):
 
                 entradas = f["entradas"]
                 for entrada in entradas:
+                    if not any(entrada["entradas"]):
+                        continue
                     p = cls()
                     p.funcionario = funcionario
                     p.dia = entrada["dia"]
@@ -297,6 +299,8 @@ class Ponto(BaseModel):
                             not entrada["entradas"][2]]):
                         Permanencia.objects.create(ponto=p, entrada=entrada["entradas"][0],
                                            saida=entrada["entradas"][3])
+                    if p.permanencias.count() == 0:
+                        p.delete()
 
     @property
     def is_weekend(self):
