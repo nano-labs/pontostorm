@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.utils.safestring import mark_safe
 from django.template import loader
 
+from ponto.models import format_minutes
 from ponto.models import (Funcionario, Feriado, Ponto, Departamento,
                           Permanencia, Anexo)
 
@@ -36,8 +37,16 @@ class PontoAdmin(admin.ModelAdmin):
                             SEMANA[obj.dia.weekday()])
     dia_calendario.short_description = u'Dia'
 
+    def trabalhado(self, obj):
+        return format_minutes(obj.expediente_trabalhado)
+    trabalhado.short_description = u'Trabalhado'
 
-    list_display = ("dia_calendario", "funcionario", "tipo", "permanencias")
+    def extras(self, obj):
+        return format_minutes(obj.extra)
+    extras.short_description = u'Extras'
+
+    list_display = ("dia_calendario", "funcionario", "tipo", "permanencias",
+                    "trabalhado", "extras")
     list_filter = ("dia", "funcionario", "tipo")
     inlines = (PermanenciaInline, AnexoInline)
 

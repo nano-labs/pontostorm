@@ -2,7 +2,8 @@
 """Provavelmente o unico mudel do projeto."""
 from __future__ import unicode_literals
 
-from datetime import time
+from math import sqrt
+from datetime import datetime, time, timedelta
 from django.contrib.auth.models import User
 from django.db import models
 
@@ -12,15 +13,28 @@ from utils.models import BaseModel
 JORNADA_PADRAO = time(8, 0, 0)
 
 
-def format_minutes(minutes, format_string):
-    u"""
-    Converte um tempo de total de minutos para string.
+def format_minutes(minutes):
+    u"""Converte um tempo de total de minutos para string."""
+    positive_minutes = abs(minutes)
+    horas = positive_minutes / 60
+    minutos = positive_minutes % 60
+    return "%s%.02d:%.02d" % (["", "-"][minutes < 0], horas, minutos)
 
-    Ex:
-    >>> format_minutes(121, "%H:%M:%S")
-    >>> "00:02:01"
-    """
-    pass
+def time_to_minutes(time_object):
+    """Recebe um objeto datetime.time e retorna o total de minutos."""
+    return (time_object.hour * 60) + time_object.minute
+
+def media_e_desvio(l):
+    u"""Retorna a média e desvio padrão com base numa lista de valores."""
+    l = [i for i in l if i]
+    media = 0
+    dp = 0
+    if len(l) >= 2:
+        media = sum(l) / float(len(l))
+        dp = sqrt((sum([i ** 2 for i in l]) - ((sum(l) ** 2) / len(l))) / (len(l) - 1))
+    media = int(media)
+    dp = int(dp)
+    return media, dp
 
 
 class Departamento(BaseModel):
@@ -69,6 +83,18 @@ class Funcionario(BaseModel):
     sabado = models.TimeField("Sábado", default=time(0, 0, 0))
     domingo = models.TimeField("Domingo", default=time(0, 0, 0))
 
+    @property
+    def expedientes(self):
+        """Agrupa os expedientes usando como chave a resposta de weekday()."""
+        return {0: self.segunda,
+                1: self.terca,
+                2: self.quarta,
+                3: self.quinta,
+                4: self.sexta,
+                5: self.sabado,
+                6: self.domingo}
+    
+
     @classmethod
     def importar_planilha(cls, arquivo):
         """Importa a planilha de funcionarios e atualiza a tabela."""
@@ -92,6 +118,74 @@ class Funcionario(BaseModel):
             f.departamento = get_departamento(funcionario["departamento"])
             f.save()
 
+    def relatorio(self, inicio, fim):
+        u"""Retorna todos os dados para o relatório deste funcionário."""
+        # DIA, ENTRADAS e SAIDAS, TIPO, TRABALHADO, EXTRA, SALDO_PERIODO, FALTAS_PERIODO, SALDO_EVER, FALTAS_EVER
+        def logica_permanencias(permanencias):
+            chegada, almoco, volta, saida, outros = None, None, None, None, []
+            if len(permanencias) == 1:
+                chegada = (permanencias[0].entrada, permanencias[0].entrada_manual)
+                saida = (permanencias[0].saida, permanencias[0].saida_manual)
+            elif len(permanencias) >= 2:
+                chegada = (permanencias[0].entrada, permanencias[0].entrada_manual)
+                almoco = (permanencias[0].saida, permanencias[0].saida_manual)
+                volta = (permanencias[1].entrada, permanencias[1].entrada_manual)
+                saida = (permanencias[1].saida, permanencias[1].saida_manual)
+            if len(permanencias) > 2:
+                for p in permanencias[2:]:
+                    outros.append((p.entrada, p.entrada_manual))
+                    outros.append((p.saida, p.saida_manual))
+            return chegada, almoco, volta, saida, outros
+            
+        saldo_anterior = 0
+        faltas_anteriores = 0
+        ponto_anterior = self.pontos.filter(dia__lt=inicio).order_by("dia").last()
+        if ponto_anterior:
+            saldo_anterior = ponto_anterior.saldo()
+            faltas_anteriores = ponto_anterior.faltas()
+
+        pontos = self.pontos.filter(dia__gte=inicio, dia__lte=fim).order_by("dia")
+        saldo_acumulado = 0
+        faltas_acumuladas = 0
+        entradas = []
+        for p in pontos:
+            saldo_acumulado += p.extra
+            faltas_acumuladas += int(p.tipo == Ponto.FALTA)
+            chegada, almoco, volta, saida, outros = logica_permanencias(p.permanencias.all())
+
+            entrada = {"dia": p.dia,
+                       "chegada": chegada,
+                       "almoco": almoco,
+                       "volta": volta,
+                       "saida": saida,
+                       "outros": outros,
+                       "trabalhado": p.expediente_trabalhado,
+                       "tipo": p.get_tipo_display(),
+                       "extra": p.extra,
+                       "saldo_periodo": saldo_acumulado,
+                       "faltas_periodo": faltas_acumuladas,
+                       "saldo_total": saldo_acumulado + saldo_anterior,
+                       "faltas_totais": faltas_acumuladas + faltas_anteriores}
+            entradas.append(entrada)
+
+        return {"entradas": entradas,
+                "saldo_periodo": saldo_acumulado,
+                "faltas_periodo": faltas_acumuladas,
+                "saldo_total": saldo_acumulado + saldo_anterior,
+                "faltas_totais": faltas_acumuladas + faltas_anteriores,
+                "disponibilidade": self.disponibilidade(inicio, fim),
+                "assiduidade": self.assiduidade(inicio, fim),
+                "entrada_media": self.entrada_media(inicio, fim),
+                "saida_media": self.saida_media(inicio, fim)}
+
+    def pontos_filtrados(self, inicio=None, fim=None, filtros={}):
+        """Retorna o queryset de pontos filtrados."""
+        if inicio:
+            filtros["dia__gte"] = inicio
+        if fim:
+            filtros["dia__lte"] = fim
+        return self.pontos.filter(**filtros)
+
     def tempo_trabalhado(self, inicio=None, fim=None):
         u"""
         Retorna o total de tempo trabalhado, em minutos, no período.
@@ -102,8 +196,11 @@ class Funcionario(BaseModel):
         Caso não seja informado 'fim' será considerado o periodo até sua última
         entrada no sistema.
         """
-        # TODO
-        pass
+        pontos = self.pontos_filtrados(inicio, fim)
+        total = 0
+        for p in pontos:
+            total += p.expediente_trabalhado
+        return total
 
     def tempo_esperado(self, inicio=None, fim=None):
         u"""
@@ -115,8 +212,11 @@ class Funcionario(BaseModel):
         Caso não seja informado 'fim' será considerado o periodo até sua última
         entrada no sistema.
         """
-        # TODO
-        pass
+        pontos = self.pontos_filtrados(inicio, fim)
+        total = 0
+        for p in pontos:
+            total += p.expediente_esperado
+        return total
 
     def disponibilidade(self, inicio=None, fim=None):
         u"""
@@ -132,7 +232,7 @@ class Funcionario(BaseModel):
         esperado = self.tempo_esperado(inicio, fim)
         disponibilidade = 0.0
         if esperado > 0:
-            disponibilidade = trabalhado / float(esperado)
+            disponibilidade = trabalhado / float(esperado) * 100
         return {"trabalhado": trabalhado,
                 "esperado": esperado,
                 "disponibilidade": disponibilidade}
@@ -147,8 +247,8 @@ class Funcionario(BaseModel):
         Caso não seja informado 'fim' será considerado o periodo até sua última
         entrada no sistema.
         """
-        # TODO
-        pass
+        saldo = self.tempo_esperado(inicio, fim) - self.tempo_trabalhado(inicio, fim)
+        return saldo
 
     def faltas(self, inicio=None, fim=None):
         u"""
@@ -160,8 +260,7 @@ class Funcionario(BaseModel):
         Caso não seja informado 'fim' será considerado o periodo até sua última
         entrada no sistema.
         """
-        # TODO
-        pass
+        return self.pontos_filtrados(inicio, fim, {"tipo": Ponto.FALTA}).count()
 
     def presencas(self, inicio=None, fim=None):
         u"""
@@ -173,8 +272,7 @@ class Funcionario(BaseModel):
         Caso não seja informado 'fim' será considerado o periodo até sua última
         entrada no sistema.
         """
-        # TODO
-        pass
+        return self.pontos_filtrados(inicio, fim, {"tipo": Ponto.DIA_UTIL}).count()
 
     def assiduidade(self, inicio=None, fim=None):
         u"""
@@ -191,9 +289,9 @@ class Funcionario(BaseModel):
         total = presencas + faltas
         assiduidade = 0.0
         if total > 0:
-            assiduidade = presencas / float(total)
-        return {"presencas": trabalhado,
-                "faltas": esperado,
+            assiduidade = presencas / float(total) * 100
+        return {"presencas": presencas,
+                "faltas": faltas,
                 "total": total,
                 "assiduidade": assiduidade}
 
@@ -207,8 +305,13 @@ class Funcionario(BaseModel):
         Caso não seja informado 'fim' será considerado o periodo até sua última
         entrada no sistema.
         """
-        # TODO
-        pass
+        entradas = []
+        pontos = self.pontos_filtrados(inicio, fim)
+        for ponto in pontos:
+            permanencia = ponto.permanencias.first()
+            if permanencia:
+                entradas.append(time_to_minutes(permanencia.entrada.time()))
+        return media_e_desvio(entradas)
 
     def saida_media(self, inicio=None, fim=None):
         u"""
@@ -220,13 +323,28 @@ class Funcionario(BaseModel):
         Caso não seja informado 'fim' será considerado o periodo até sua última
         entrada no sistema.
         """
-        # TODO
-        pass
+        saidas = []
+        pontos = self.pontos_filtrados(inicio, fim)
+        for ponto in pontos:
+            permanencia = ponto.permanencias.last()
+            if permanencia:
+                saidas.append(time_to_minutes(permanencia.saida.time()))
+        return media_e_desvio(saidas)
 
     def expediente_esperado(self, dia):
         """Retorna o tempo, em minutos, de expediente esperado neste dia."""
-        # TODO
-        pass
+        # Cuidado com a lógica abaixo para não gerar recursividade infinita
+        ponto = self.pontos.get_or_none(dia=dia)
+        if ponto:
+            if ponto.tipo in [ponto.FOLGA, ponto.FALTA_ABONADA]:
+                return 0
+
+            if ponto.is_holiday:
+                return 0
+
+        if Feriado.objects.get_or_none(dia=dia):
+            return 0
+        return time_to_minutes(self.expedientes[dia.weekday()])
 
     def __unicode__(self):
         u"""Unicode para exibição do usuário."""
@@ -305,18 +423,34 @@ class Ponto(BaseModel):
     @property
     def is_weekend(self):
         u"""Boleano que informa se este dia é ou não fim de semana."""
-        # TODO
-        pass
+        return self.dia.weekday() in [5, 6]
 
     @property
     def is_holiday(self):
         u"""Boleano que informa se este dia é ou não feriado."""
-        # TODO
-        pass
+        feriado = Feriado.objects.get_or_none(dia=self.dia)
+        if feriado:
+            return True
+        return False
 
+    @property
     def expediente_esperado(self):
         u"""Retorna o tempo, em minutos, de expediente esperado neste dia."""
+        # Cuidado com a lógica abaixo para não gerar recursividade infinita.
         return self.funcionario.expediente_esperado(self.dia)
+
+    @property
+    def expediente_trabalhado(self):
+        u"""Retorna o tempo, em minutos, de expediente trabalhado neste dia."""
+        total = 0
+        for p in self.permanencias.all():
+            total += p.trabalhado
+        return total
+
+    @property
+    def extra(self):
+        u"""Minutos extras trabalhadas hoje."""
+        return self.expediente_trabalhado - self.expediente_esperado   
 
     def saldo(self, inicio=None):
         u"""
@@ -402,6 +536,13 @@ class Permanencia(BaseModel):
     saida_manual = models.BooleanField("Saída registrada manualmente",
                                        default=False)
 
+    @property
+    def trabalhado(self):
+        """Retorna o tempo, em minutos, trabalhado nesta permanência."""
+        if self.entrada and self.saida:
+            total = self.saida - self.entrada
+        return int(total.total_seconds() / 60)
+
     def __unicode__(self):
         u"""Unicode para exibição."""
         return u"%s entrou em %s%s e saiu em %s%s" % (
@@ -411,6 +552,7 @@ class Permanencia(BaseModel):
                ["", "*"][self.saida_manual])
 
     class Meta:
+        ordering = ("entrada", )
         verbose_name = "Permanência"
         verbose_name_plural = "Permanências"
 

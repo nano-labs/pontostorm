@@ -1,0 +1,20 @@
+{% extends "admin/base_site.html" %}
+{% load i18n grp_tags admin_urls admin_static admin_list %}
+
+<!-- LOADING -->
+{% load i18n l10n admin_urls admin_static %}
+
+{% block javascripts %}
+{% endblock %}
+
+<!-- BREADCRUMBS -->
+{% block breadcrumbs %}
+    <ul class="grp-horizontal-list">
+        <li><a href="{% url 'admin:index' %}">{% trans "Home" %}</a></li>
+        <li>Relatório</li>
+    </ul>
+{% endblock %}
+
+<!-- CONTENT -->
+{% block content %}
+{% endblock %}

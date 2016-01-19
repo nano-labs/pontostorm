@@ -1,0 +1,123 @@
+{% extends "ponto_base.html" %}
+{% load i18n grp_tags admin_urls admin_static admin_list time_utils %}
+
+{% block extrastyle %}
+<style type="text/css">
+    td.label {
+        background-image: linear-gradient(#eeeeee, #e0e0e0);
+    }
+    table {
+        width: 100%;
+    }
+    div.relatorio {
+        width: 980px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="g-d-c">
+        <div class="relatorio">
+            <table>
+                <tr>
+                    <td class="label">Nome:</td>
+                    <td colspan="5"><strong>{{funcionario.nome}}</strong></td>
+                </tr>
+                <tr>
+                    <td class="label">PIS/PASEP:</td>
+                    <td>{{funcionario.pis}}</td>
+                    <td class="label">CTPS:</td>
+                    <td>{{funcionario.ctps}}</td>
+                    <td class="label">Admissão:</td>
+                    <td>{{funcionario.data_admissao|date:"d/m/Y"}}</td>
+                </tr>
+                <tr>
+                    <td class="label">Departamento:</td>
+                    <td>{{funcionario.departamento.nome}}</td>
+                    <td class="label">Função:</td>
+                    <td colspan="3">{{funcionario.funcao}}</td>
+                </tr>
+            </table>
+            <br>
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="2" rowspan="2">Data</th>
+                        <th colspan="8">Diário</th>
+                        <th colspan="2">No período</th>
+                        <th colspan="2">Acumulado</th>
+                    </tr>
+                    <tr>
+                        <th>Entrada</th>
+                        <th>Almoço</th>
+                        <th>Volta</th>
+                        <th>Saída</th>
+                        <th>Outros</th>
+                        <th>Tipo</th>
+                        <th>Trabalhado</th>
+                        <th>Extra</th>
+                        <th>Saldo</th>
+                        <th>Faltas</th>
+                        <th>Saldo</th>
+                        <th>Faltas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {%for entrada in relatorio.entradas %}
+                    <tr>
+                        <td>{{entrada.dia|date:"d/m/Y"}}</td>
+                        <td>{{entrada.dia|date:"D"}}</td>
+                        <td>{{entrada.chegada.0|date:"H:i"}}{{entrada.chegada.1|yesno:"*,"}}</td>
+                        <td>{{entrada.almoco.0|date:"H:i"}}{{entrada.almoco.1|yesno:"*,"}}</td>
+                        <td>{{entrada.volta.0|date:"H:i"}}{{entrada.volta.1|yesno:"*,"}}</td>
+                        <td>{{entrada.saida.0|date:"H:i"}}{{entrada.saida.1|yesno:"*,"}}</td>
+                        <td>
+                            {% for o in entrada.outros %}
+                            {{o.0|date:"H:i"}}{{o.1|yesno:"*,"}} 
+                            {% endfor %}
+                        </td>
+                        <td>{{entrada.tipo}}</td>
+                        <td>{{entrada.trabalhado|to_time}}</td>
+                        <td>{{entrada.extra|to_time}}</td>
+                        <td>{{entrada.saldo_periodo|to_time}}</td>
+                        <td>{{entrada.faltas_periodo}}</td>
+                        <td>{{entrada.saldo_total|to_time}}</td>
+                        <td>{{entrada.faltas_totais}}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <br>
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="6">Período de {{inicio|date:"d/m/Y"}} à {{fim|date:"d/m/Y"}}</th>
+                        <th colspan="2">Totais</th>
+                    </tr>
+                    <tr>
+                        <th>Entrada media</th>
+                        <th>Saída media</th>
+                        <th>Disponibilidade</th>
+                        <th>Assiduidade</th>
+                        <th>Saldo</th>
+                        <th>Faltas</th>
+                        <th>Saldo</th>
+                        <th>Faltas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{relatorio.entrada_media.0|to_time}} (σ={{relatorio.entrada_media.1}})</td>
+                        <td>{{relatorio.saida_media.0|to_time}} (σ={{relatorio.saida_media.1}})</td>
+                        <td>{{relatorio.disponibilidade.trabalhado|to_time}} de {{relatorio.disponibilidade.esperado|to_time}} ({{relatorio.disponibilidade.disponibilidade|floatformat:1}}%)</td>
+                        <td>{{relatorio.assiduidade.presencas}} de {{relatorio.assiduidade.total}} ({{relatorio.assiduidade.assiduidade|floatformat:1}}%)</td>
+                        <td>{{relatorio.saldo_periodo|to_time}}</td>
+                        <td>{{relatorio.faltas_periodo}}</td>
+                        <td>{{relatorio.saldo_total|to_time}}</td>
+                        <td>{{relatorio.faltas_totais}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
