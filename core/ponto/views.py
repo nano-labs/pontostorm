@@ -21,17 +21,16 @@ def funcionario(request):
                 feriado = Feriado.objects.get_or_none(dia=dia)
                 e = {"dia": dia}
                 if dia.weekday() in [5, 6]:
-                    e["objeto"] = {"tipo": "fim_de_semana"}
+                    e["ponto"] = {"tipo": "fim_de_semana"}
                 elif feriado:
-                    e["objeto"] = {"tipo": Ponto.FOLGA}
-                    e["tipo"] = feriado.descricao
+                    e["ponto"] = {"tipo": Ponto.FOLGA,
+                                  "get_tipo_display": feriado.descricao}
 
             resultado.append(e)
         return resultado
 
-
     funcionario = Funcionario.objects.get(id=38)
-    inicio = datetime(2015, 11, 30)
+    inicio = datetime(2014, 11, 30)
     fim = datetime.now().date()
     relatorio = funcionario.relatorio(inicio=inicio, fim=fim)
     relatorio["entradas"] = insere_lacunas(relatorio["entradas"])

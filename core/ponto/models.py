@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.db import models
 
 from importador.models import le_planilha_funcionarios, le_planilha_ponto
-from utils.models import BaseModel
+from utils.models import BaseModel, PermanentModel
 
 JORNADA_PADRAO = time(8, 0, 0)
 
@@ -143,21 +143,26 @@ class Funcionario(BaseModel):
     def relatorio(self, inicio, fim):
         u"""Retorna todos os dados para o relatório deste funcionário."""
         # DIA, ENTRADAS e SAIDAS, TIPO, TRABALHADO, EXTRA, SALDO_PERIODO, FALTAS_PERIODO, SALDO_EVER, FALTAS_EVER
-        def logica_permanencias(permanencias):
-            chegada, almoco, volta, saida, outros = None, None, None, None, []
-            if len(permanencias) == 1:
-                chegada = (permanencias[0].entrada, permanencias[0].entrada_manual)
-                saida = (permanencias[0].saida, permanencias[0].saida_manual)
-            elif len(permanencias) >= 2:
-                chegada = (permanencias[0].entrada, permanencias[0].entrada_manual)
-                almoco = (permanencias[0].saida, permanencias[0].saida_manual)
-                volta = (permanencias[1].entrada, permanencias[1].entrada_manual)
-                saida = (permanencias[1].saida, permanencias[1].saida_manual)
-            if len(permanencias) > 2:
-                for p in permanencias[2:]:
-                    outros.append((p.entrada, p.entrada_manual))
-                    outros.append((p.saida, p.saida_manual))
-            return chegada, almoco, volta, saida, outros
+        # def logica_registros(registros):
+        #     """Distribui os registros nos 'slots'."""
+        #     chegada, almoco, volta, saida, outros = None, None, None, None, []
+        #     if registros:
+        #         registros = list(registros)
+        #         chegada = registros[0]
+        #         if len(registros) == 2:
+        #             saida = registros[1]
+
+        #         elif len(registros) == 3:
+        #             almoco = registros[1]
+        #             volta = registros[2]
+
+        #         elif len(registros) >= 4:
+        #             almoco = registros[1]
+        #             volta = registros[2]
+        #             saida = registros[3]
+        #             outros = registros[4:]
+
+        #     return chegada, almoco, volta, saida, outros
 
         saldo_anterior = 0
         faltas_anteriores = 0
@@ -174,22 +179,22 @@ class Funcionario(BaseModel):
         for p in pontos:
             saldo_acumulado += p.extra
             faltas_acumuladas += int(p.tipo == Ponto.FALTA)
-            chegada, almoco, volta, saida, outros = logica_permanencias(p.permanencias.all())
+            # chegada, almoco, volta, saida, outros = logica_registros(p.registros.all())
 
             entrada = {"dia": p.dia,
-                       "chegada": chegada,
-                       "almoco": almoco,
-                       "volta": volta,
-                       "saida": saida,
-                       "outros": outros,
-                       "trabalhado": p.expediente_trabalhado,
-                       "tipo": p.get_tipo_display(),
-                       "extra": p.extra,
+                       # "chegada": chegada,
+                       # "almoco": almoco,
+                       # "volta": volta,
+                       # "saida": saida,
+                       # "outros": outros,
+                       # "trabalhado": p.expediente_trabalhado,
+                       # "tipo": p.get_tipo_display(),
+                       # "extra": p.extra,
                        "saldo_periodo": saldo_acumulado,
                        "faltas_periodo": faltas_acumuladas,
                        "saldo_total": saldo_acumulado + saldo_anterior,
                        "faltas_totais": faltas_acumuladas + faltas_anteriores,
-                       "objeto": p}
+                       "ponto": p}
             entradas.append(entrada)
         return {"entradas": entradas,
                 "saldo_periodo": saldo_acumulado,
@@ -331,12 +336,9 @@ class Funcionario(BaseModel):
         Caso não seja informado 'fim' será considerado o periodo até sua última
         entrada no sistema.
         """
-        entradas = []
         pontos = self.pontos_filtrados(inicio, fim)
-        for ponto in pontos:
-            permanencia = ponto.permanencias.first()
-            if permanencia:
-                entradas.append(time_to_minutes(permanencia.entrada.time()))
+        entradas = [time_to_minutes(i.horario.time())
+                    for i in [p.chegada for p in pontos] if i]
         return media_e_desvio(entradas)
 
     def saida_media(self, inicio=None, fim=None):
@@ -349,12 +351,9 @@ class Funcionario(BaseModel):
         Caso não seja informado 'fim' será considerado o periodo até sua última
         entrada no sistema.
         """
-        saidas = []
         pontos = self.pontos_filtrados(inicio, fim)
-        for ponto in pontos:
-            permanencia = ponto.permanencias.last()
-            if permanencia:
-                saidas.append(time_to_minutes(permanencia.saida.time()))
+        saidas = [time_to_minutes(i.horario.time())
+                  for i in [p.saida for p in pontos] if i]
         return media_e_desvio(saidas)
 
     def expediente_esperado(self, dia):
@@ -432,19 +431,45 @@ class Ponto(BaseModel):
                     p.funcionario = funcionario
                     p.dia = entrada["dia"]
                     p.save()
-                    if entrada["entradas"][0] and entrada["entradas"][1]:
-                        Permanencia.objects.create(ponto=p, entrada=entrada["entradas"][0],
-                                           saida=entrada["entradas"][1])
-                    if entrada["entradas"][2] and entrada["entradas"][3]:
-                        Permanencia.objects.create(ponto=p, entrada=entrada["entradas"][2],
-                                           saida=entrada["entradas"][3])
-                    if all([entrada["entradas"][0], entrada["entradas"][3],
-                            not entrada["entradas"][1],
-                            not entrada["entradas"][2]]):
-                        Permanencia.objects.create(ponto=p, entrada=entrada["entradas"][0],
-                                           saida=entrada["entradas"][3])
-                    if p.permanencias.count() == 0:
+                    for e in entrada["entradas"]:
+                        if e:
+                            Registro.objects.create(ponto=p, horario=e)
+                    if p.registros.count() == 0:
                         p.delete()
+
+    @property
+    def chegada(self):
+        u"""Registro de entrada do funcionário."""
+        return self.registros.first()
+
+    @property
+    def saida_almoco(self):
+        u"""Registro da saida para almoço do funcionário."""
+        if self.registros.count() >= 3:
+            return self.registros.all()[1]
+        return None
+
+    @property
+    def volta_almoco(self):
+        u"""Registro da volta do almoço do funcionário."""
+        if self.registros.count() >= 3:
+            return self.registros.all()[2]
+        return None
+
+    @property
+    def saida(self):
+        u"""Registro da saída do funcionário."""
+        quantidade = self.registros.count()
+        if quantidade == 2:
+            return self.registros.all()[1]
+        elif quantidade >= 4:
+            return self.registros.all()[3]
+        return None
+
+    @property
+    def outros_registros(self):
+        u"""Outros registros que não se encaixam no padrão de 4 registros."""
+        return self.registros.all()[4:]
 
     @property
     def is_weekend(self):
@@ -468,9 +493,15 @@ class Ponto(BaseModel):
     @property
     def expediente_trabalhado(self):
         u"""Retorna o tempo, em minutos, de expediente trabalhado neste dia."""
+        registros = list(self.registros.all())
+        if len(registros) % 2 == 1:
+            # Numero impar de registros
+            return 0
         total = 0
-        for p in self.permanencias.all():
-            total += p.trabalhado
+        tuplas = zip(range(1, len(registros), 2), range(0, len(registros), 2))
+        for saida, entrada in tuplas:
+            delta = registros[saida].horario - registros[entrada].horario
+            total += int(delta.total_seconds() / 60)
         return total
 
     @property
@@ -549,38 +580,25 @@ class Ponto(BaseModel):
         unique_together = (("funcionario", "dia"),)
 
 
-class Permanencia(BaseModel):
+class Registro(PermanentModel):
 
-    u"""Entrada e saída de um dado funcionario em um dado dia."""
+    u"""Passagem de um funcionário pelo relógio de ponto."""
 
     ponto = models.ForeignKey(Ponto, verbose_name="Ponto",
-                              related_name="permanencias")
-    entrada = models.DateTimeField("Entrada")
-    saida = models.DateTimeField("Saída")
-    entrada_manual = models.BooleanField("Entrada registrada manualmente",
-                                         default=False)
-    saida_manual = models.BooleanField("Saída registrada manualmente",
-                                       default=False)
-
-    @property
-    def trabalhado(self):
-        u"""Retorna o tempo, em minutos, trabalhado nesta permanência."""
-        if self.entrada and self.saida:
-            total = self.saida - self.entrada
-        return int(total.total_seconds() / 60)
+                              related_name="registros")
+    horario = models.DateTimeField("Horário")
+    registro_manual = models.BooleanField("Registro feito manualmente",
+                                          default=False)
 
     def __unicode__(self):
         u"""Unicode para exibição."""
-        return u"%s entrou em %s%s e saiu em %s%s" % (
-               self.ponto.funcionario.nome, self.entrada,
-               ["", "*"][self.entrada_manual],
-               self.saida,
-               ["", "*"][self.saida_manual])
+        return u"%s - %s%s" % (self.ponto.funcionario.nome, self.horario,
+                               ["", "*"][self.registro_manual])
 
     class Meta:
-        ordering = ("entrada", )
-        verbose_name = "Permanência"
-        verbose_name_plural = "Permanências"
+        ordering = ("horario", )
+        verbose_name = "Registro"
+        verbose_name_plural = "Registros"
 
 
 class Anexo(BaseModel):

@@ -12,6 +12,9 @@
     div.relatorio {
         width: 980px;
     }
+    td.aviso {
+        background-color: #FFAAAA;
+    }
     tr.tipo_2 {
         /*Falta*/
         background-color: #FFDDDD;
@@ -79,21 +82,21 @@
                     <tr><td colspan="12">Anterior</td><td>{{relatorio.saldo_anterior|to_time}}</td><td>{{relatorio.faltas_anteriores}}</td></tr>
                     {% endif %}
                     {%for entrada in relatorio.entradas %}
-                    <tr class="tipo_{{entrada.objeto.tipo}}">
+                    <tr class="tipo_{{entrada.ponto.tipo}}">
                         <td>{{entrada.dia|date:"d/m/Y"}}</td>
                         <td>{{entrada.dia|date:"D"}}</td>
-                        <td>{{entrada.chegada.0|date:"H:i"}}{{entrada.chegada.1|yesno:"*,"}}</td>
-                        <td>{{entrada.almoco.0|date:"H:i"}}{{entrada.almoco.1|yesno:"*,"}}</td>
-                        <td>{{entrada.volta.0|date:"H:i"}}{{entrada.volta.1|yesno:"*,"}}</td>
-                        <td>{{entrada.saida.0|date:"H:i"}}{{entrada.saida.1|yesno:"*,"}}</td>
+                        <td>{{entrada.ponto.chegada.horario|date:"H:i"}}{{entrada.ponto.chegada.registro_manual|yesno:"*,"}}</td>
+                        <td>{{entrada.ponto.saida_almoco.horario|date:"H:i"}}{{entrada.ponto.saida_almoco.registro_manual|yesno:"*,"}}</td>
+                        <td>{{entrada.ponto.volta_almoco.horario|date:"H:i"}}{{entrada.ponto.volta_almoco.registro_manual|yesno:"*,"}}</td>
+                        <td {% if not entrada.ponto.saida and entrada.ponto.tipo == 0 %}class="aviso"{% endif %}>{{entrada.ponto.saida.horario|date:"H:i"}}{{entrada.ponto.saida.registro_manual|yesno:"*,"}}</td>
                         <td>
-                            {% for o in entrada.outros %}
-                            {{o.0|date:"H:i"}}{{o.1|yesno:"*,"}} 
+                            {% for o in entrada.ponto.outros_registros %}
+                            {{o.horario|date:"H:i"}}{{o.registro_manual|yesno:"*,"}} 
                             {% endfor %}
                         </td>
-                        <td>{{entrada.tipo}}</td>
-                        <td>{{entrada.trabalhado|to_time}}</td>
-                        <td>{{entrada.extra|to_time}}</td>
+                        <td>{{entrada.ponto.get_tipo_display}}</td>
+                        <td>{{entrada.ponto.expediente_trabalhado|to_time}}</td>
+                        <td>{{entrada.ponto.extra|to_time}}</td>
                         <td>{{entrada.saldo_periodo|to_time}}</td>
                         <td>{{entrada.faltas_periodo}}</td>
                         <td>{{entrada.saldo_total|to_time}}</td>

@@ -9,6 +9,6 @@ register = template.Library()
 @register.filter(name='to_time')
 def to_time(value):
     u"""Converte um valor de minutos em HHH:MM."""
-    if not value:
+    if not value and not value == 0:
         return ""
     return format_minutes(int(value))

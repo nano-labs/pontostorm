@@ -7,13 +7,13 @@ from django.template import loader
 
 from ponto.models import format_minutes
 from ponto.models import (Funcionario, Feriado, Ponto, Departamento,
-                          Permanencia, Anexo)
+                          Registro, Anexo)
 
 SEMANA = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
 
 
-class PermanenciaInline(admin.TabularInline):
-    model = Permanencia
+class RegistroInline(admin.TabularInline):
+    model = Registro
     extra = 0
 
 
@@ -38,6 +38,7 @@ class PontoAdmin(admin.ModelAdmin):
     dia_calendario.short_description = u'Dia'
 
     def trabalhado(self, obj):
+        return ""
         return format_minutes(obj.expediente_trabalhado)
     trabalhado.short_description = u'Trabalhado'
 
@@ -48,7 +49,7 @@ class PontoAdmin(admin.ModelAdmin):
     list_display = ("dia_calendario", "funcionario", "tipo", "permanencias",
                     "trabalhado", "extras")
     list_filter = ("dia", "funcionario", "tipo")
-    inlines = (PermanenciaInline, AnexoInline)
+    inlines = (RegistroInline, AnexoInline)
 
 
 admin.site.register(Funcionario)
