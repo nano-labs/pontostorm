@@ -12,6 +12,18 @@
     div.relatorio {
         width: 980px;
     }
+    tr.tipo_2 {
+        /*Falta*/
+        background-color: #FFDDDD;
+    }
+    tr.tipo_1 {
+        background-color: #D0FFDE;
+        color: #BBBBBB;
+    }
+    tr.tipo_fim_de_semana {
+        background-color: #ECECEC;
+        color: #BBBBBB;
+    }
 </style>
 {% endblock %}
 
@@ -63,8 +75,11 @@
                     </tr>
                 </thead>
                 <tbody>
+                    {% if relatorio.saldo_anterior or relatorio.faltas_anteriores %}
+                    <tr><td colspan="12">Anterior</td><td>{{relatorio.saldo_anterior|to_time}}</td><td>{{relatorio.faltas_anteriores}}</td></tr>
+                    {% endif %}
                     {%for entrada in relatorio.entradas %}
-                    <tr>
+                    <tr class="tipo_{{entrada.objeto.tipo}}">
                         <td>{{entrada.dia|date:"d/m/Y"}}</td>
                         <td>{{entrada.dia|date:"D"}}</td>
                         <td>{{entrada.chegada.0|date:"H:i"}}{{entrada.chegada.1|yesno:"*,"}}</td>

@@ -20,9 +20,11 @@ def format_minutes(minutes):
     minutos = positive_minutes % 60
     return "%s%.02d:%.02d" % (["", "-"][minutes < 0], horas, minutos)
 
+
 def time_to_minutes(time_object):
     """Recebe um objeto datetime.time e retorna o total de minutos."""
     return (time_object.hour * 60) + time_object.minute
+
 
 def media_e_desvio(l):
     u"""Retorna a média e desvio padrão com base numa lista de valores."""
@@ -93,7 +95,6 @@ class Funcionario(BaseModel):
                 4: self.sexta,
                 5: self.sabado,
                 6: self.domingo}
-    
 
     @classmethod
     def importar_planilha(cls, arquivo):
@@ -118,6 +119,27 @@ class Funcionario(BaseModel):
             f.departamento = get_departamento(funcionario["departamento"])
             f.save()
 
+    def checkup(self, inicio=None, fim=None):
+        u"""Verifica incongruências nos pontos, aplica faltas etc."""
+        pontos = self.pontos_filtrados(inicio, fim).order_by("dia")
+        inicio = pontos.first()
+        inicio = inicio.dia if inicio else datetime.today()
+        fim = pontos.last()
+        fim = fim.dia if fim else datetime.today()
+
+        pontos = {p.dia: p for p in pontos}
+        for d in xrange((fim - inicio).days):
+            dia = inicio + timedelta(days=d)
+            ponto = pontos.get(dia)
+            if self.expediente_esperado(dia) > 0 and not ponto:
+                # Falta
+                Ponto.objects.create(funcionario=self, tipo=Ponto.FALTA,
+                                     dia=dia)
+                print dia, "Falta"
+            else:
+                print dia, ponto
+        # TODO: Verificar incongruencias
+
     def relatorio(self, inicio, fim):
         u"""Retorna todos os dados para o relatório deste funcionário."""
         # DIA, ENTRADAS e SAIDAS, TIPO, TRABALHADO, EXTRA, SALDO_PERIODO, FALTAS_PERIODO, SALDO_EVER, FALTAS_EVER
@@ -136,13 +158,14 @@ class Funcionario(BaseModel):
                     outros.append((p.entrada, p.entrada_manual))
                     outros.append((p.saida, p.saida_manual))
             return chegada, almoco, volta, saida, outros
-            
+
         saldo_anterior = 0
         faltas_anteriores = 0
         ponto_anterior = self.pontos.filter(dia__lt=inicio).order_by("dia").last()
         if ponto_anterior:
             saldo_anterior = ponto_anterior.saldo()
             faltas_anteriores = ponto_anterior.faltas()
+        # import ipdb; ipdb.set_trace()
 
         pontos = self.pontos.filter(dia__gte=inicio, dia__lte=fim).order_by("dia")
         saldo_acumulado = 0
@@ -165,9 +188,9 @@ class Funcionario(BaseModel):
                        "saldo_periodo": saldo_acumulado,
                        "faltas_periodo": faltas_acumuladas,
                        "saldo_total": saldo_acumulado + saldo_anterior,
-                       "faltas_totais": faltas_acumuladas + faltas_anteriores}
+                       "faltas_totais": faltas_acumuladas + faltas_anteriores,
+                       "objeto": p}
             entradas.append(entrada)
-
         return {"entradas": entradas,
                 "saldo_periodo": saldo_acumulado,
                 "faltas_periodo": faltas_acumuladas,
@@ -176,10 +199,13 @@ class Funcionario(BaseModel):
                 "disponibilidade": self.disponibilidade(inicio, fim),
                 "assiduidade": self.assiduidade(inicio, fim),
                 "entrada_media": self.entrada_media(inicio, fim),
-                "saida_media": self.saida_media(inicio, fim)}
+                "saida_media": self.saida_media(inicio, fim),
+                "saldo_anterior": saldo_anterior,
+                "faltas_anteriores": faltas_anteriores}
 
-    def pontos_filtrados(self, inicio=None, fim=None, filtros={}):
+    def pontos_filtrados(self, inicio=None, fim=None, filtros=None):
         """Retorna o queryset de pontos filtrados."""
+        filtros = filtros or {}
         if inicio:
             filtros["dia__gte"] = inicio
         if fim:
@@ -449,8 +475,8 @@ class Ponto(BaseModel):
 
     @property
     def extra(self):
-        u"""Minutos extras trabalhadas hoje."""
-        return self.expediente_trabalhado - self.expediente_esperado   
+        u"""Tempo, em minutos, extras trabalhadas hoje."""
+        return self.expediente_trabalhado - self.expediente_esperado
 
     def saldo(self, inicio=None):
         u"""
@@ -538,7 +564,7 @@ class Permanencia(BaseModel):
 
     @property
     def trabalhado(self):
-        """Retorna o tempo, em minutos, trabalhado nesta permanência."""
+        u"""Retorna o tempo, em minutos, trabalhado nesta permanência."""
         if self.entrada and self.saida:
             total = self.saida - self.entrada
         return int(total.total_seconds() / 60)
