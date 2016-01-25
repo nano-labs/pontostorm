@@ -31,7 +31,7 @@ SECRET_KEY = 'skjdflksjhfo8s7yfp2u3hr0986qt9o84duu1kq[0937845h0d872tqsk870g87b'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-TEMPLATE_DEBUG = True
+# TEMPLATE_DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -116,16 +116,35 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-TEMPLATE_CONTEXT_PROCESSORS = (
-    "django.contrib.auth.context_processors.auth",
-    "django.core.context_processors.debug",
-    "django.core.context_processors.i18n",
-    "django.core.context_processors.media",
-    "django.core.context_processors.static",
-    "django.core.context_processors.tz",
-    "django.contrib.messages.context_processors.messages",
-    "geral.context_processors.context",
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': (
+                "django.contrib.auth.context_processors.auth",
+                "django.template.context_processors.debug",
+                "django.template.context_processors.i18n",
+                "django.template.context_processors.media",
+                "django.template.context_processors.static",
+                "django.template.context_processors.tz",
+                "django.contrib.messages.context_processors.messages",
+                "geral.context_processors.context",
+            )
+        },
+        'TEMPLATE_DEBUG': True,
+    },
+]
+# TEMPLATE_CONTEXT_PROCESSORS = (
+#     "django.contrib.auth.context_processors.auth",
+#     "django.template.context_processors.debug",
+#     "django.template.context_processors.i18n",
+#     "django.template.context_processors.media",
+#     "django.template.context_processors.static",
+#     "django.template.context_processors.tz",
+#     "django.contrib.messages.context_processors.messages",
+#     "geral.context_processors.context",
+# )
 
 # EMAIL_FROM = 'Bolao SporTV <bolaosportv@globo.com>'
 # EMAIL_HOST = '10.2.207.6'

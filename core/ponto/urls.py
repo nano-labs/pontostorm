@@ -1,6 +1,8 @@
 from django.conf.urls import patterns, include, url
 
-urlpatterns = patterns('',
+from ponto.views import funcionario
+
+urlpatterns = [
     # Examples:
-    url(r'funcionario/$', 'ponto.views.funcionario', name='funcionario'),
-)
+    url(r'funcionario/$', funcionario, name='funcionario'),
+]
