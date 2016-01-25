@@ -130,9 +130,9 @@ TEMPLATES = [
                 "django.template.context_processors.tz",
                 "django.contrib.messages.context_processors.messages",
                 "geral.context_processors.context",
-            )
+            ),
+            'debug': True,
         },
-        'TEMPLATE_DEBUG': True,
     },
 ]
 # TEMPLATE_CONTEXT_PROCESSORS = (
