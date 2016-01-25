@@ -30,8 +30,33 @@
 </style>
 {% endblock %}
 
+
 {% block content %}
     <div class="g-d-c">
+        <form action="" method="GET" id="filtros">
+            Escolher funcionário:
+            <select class="filtros_select" name="pis">
+                <option value>--</option>
+                {% for f in funcionarios %}
+                <option value="{{f.pis}}" {% if funcionario.pis == f.pis%}selected="selected"{% endif %}>{{f.nome}}</option>
+                {% endfor %}
+            </select>
+            De:
+            <select class="filtros_select" name="inicio">
+                <option value>--</option>
+                {% for d in range_dias %}
+                <option value="{{d|date:"d/m/Y"}}" {% if d|date:"d/m/Y" == inicio|date:"d/m/Y" %}selected="selected"{% endif %}>{{d|date:"d/m/Y"}}</option>
+                {% endfor %}
+            </select>
+            Até:
+            <select class="filtros_select" name="fim">
+                <option value>--</option>
+                {% for d in range_dias %}
+                <option value="{{d|date:"d/m/Y"}}" {% if d|date:"d/m/Y" == fim|date:"d/m/Y" %}selected="selected"{% endif %}>{{d|date:"d/m/Y"}}</option>
+                {% endfor %}
+            </select>
+        </p>
+        <br>
         <div class="relatorio">
             <table>
                 <tr>

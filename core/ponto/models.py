@@ -119,13 +119,23 @@ class Funcionario(BaseModel):
             f.departamento = get_departamento(funcionario["departamento"])
             f.save()
 
+    @property
+    def primeiro_dia(self):
+        u"""Primeiro dia de ponto deste funcionário."""
+        p = self.pontos.order_by("dia").first()
+        return p.dia if p else datetime.today().date()
+
+    @property
+    def ultimo_dia(self):
+        u"""Último dia de ponto deste funcionário."""
+        p = self.pontos.order_by("dia").last()
+        return p.dia if p else datetime.today().date()
+
     def checkup(self, inicio=None, fim=None):
         u"""Verifica incongruências nos pontos, aplica faltas etc."""
         pontos = self.pontos_filtrados(inicio, fim).order_by("dia")
-        inicio = pontos.first()
-        inicio = inicio.dia if inicio else datetime.today()
-        fim = pontos.last()
-        fim = fim.dia if fim else datetime.today()
+        inicio = inicio or self.primeiro_dia
+        fim = fim or self.ultimo_dia
 
         pontos = {p.dia: p for p in pontos}
         for d in xrange((fim - inicio).days):
@@ -142,27 +152,8 @@ class Funcionario(BaseModel):
 
     def relatorio(self, inicio, fim):
         u"""Retorna todos os dados para o relatório deste funcionário."""
-        # DIA, ENTRADAS e SAIDAS, TIPO, TRABALHADO, EXTRA, SALDO_PERIODO, FALTAS_PERIODO, SALDO_EVER, FALTAS_EVER
-        # def logica_registros(registros):
-        #     """Distribui os registros nos 'slots'."""
-        #     chegada, almoco, volta, saida, outros = None, None, None, None, []
-        #     if registros:
-        #         registros = list(registros)
-        #         chegada = registros[0]
-        #         if len(registros) == 2:
-        #             saida = registros[1]
-
-        #         elif len(registros) == 3:
-        #             almoco = registros[1]
-        #             volta = registros[2]
-
-        #         elif len(registros) >= 4:
-        #             almoco = registros[1]
-        #             volta = registros[2]
-        #             saida = registros[3]
-        #             outros = registros[4:]
-
-        #     return chegada, almoco, volta, saida, outros
+        inicio = inicio or self.primeiro_dia
+        fim = fim or self.ultimo_dia
 
         saldo_anterior = 0
         faltas_anteriores = 0
@@ -170,7 +161,6 @@ class Funcionario(BaseModel):
         if ponto_anterior:
             saldo_anterior = ponto_anterior.saldo()
             faltas_anteriores = ponto_anterior.faltas()
-        # import ipdb; ipdb.set_trace()
 
         pontos = self.pontos.filter(dia__gte=inicio, dia__lte=fim).order_by("dia")
         saldo_acumulado = 0
@@ -179,17 +169,8 @@ class Funcionario(BaseModel):
         for p in pontos:
             saldo_acumulado += p.extra
             faltas_acumuladas += int(p.tipo == Ponto.FALTA)
-            # chegada, almoco, volta, saida, outros = logica_registros(p.registros.all())
 
             entrada = {"dia": p.dia,
-                       # "chegada": chegada,
-                       # "almoco": almoco,
-                       # "volta": volta,
-                       # "saida": saida,
-                       # "outros": outros,
-                       # "trabalhado": p.expediente_trabalhado,
-                       # "tipo": p.get_tipo_display(),
-                       # "extra": p.extra,
                        "saldo_periodo": saldo_acumulado,
                        "faltas_periodo": faltas_acumuladas,
                        "saldo_total": saldo_acumulado + saldo_anterior,
@@ -494,7 +475,7 @@ class Ponto(BaseModel):
     def expediente_trabalhado(self):
         u"""Retorna o tempo, em minutos, de expediente trabalhado neste dia."""
         registros = list(self.registros.all())
-        if len(registros) % 2 == 1:
+        if len(registros) == 1:
             # Numero impar de registros
             return 0
         total = 0
