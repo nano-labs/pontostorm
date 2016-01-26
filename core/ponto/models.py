@@ -133,6 +133,19 @@ class Funcionario(BaseModel):
         p = self.pontos.order_by("dia").last()
         return p.dia if p else datetime.today().date()
 
+    def send_message(self, message, subject=None):
+        u"""Envia um email ao funcionário."""
+        address = self.usuario.email
+        if not email:
+            raise Exception("Funcionario %s nao possui email cadastrado" %
+                            self.nome)
+        subject = u"[Clockwork Storm] %s" % subject
+        context = {"message": message,
+                   "subject": subject}
+        template = "email_padrao.html"
+        email = TemplatedEmail(address, subject, template, context)
+        email.send()
+
     def checkup(self, inicio=None, fim=None):
         u"""Verifica incongruências nos pontos, aplica faltas etc."""
         pontos = self.pontos_filtrados(inicio, fim).order_by("dia")

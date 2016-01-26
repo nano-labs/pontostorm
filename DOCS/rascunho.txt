@@ -50,3 +50,10 @@ Ponto Eletrônico
 			- Horas esperadas desde X até hoje
 			* hoje == self
 			* sempre referente ao funcionario
+
+
+Duvidas:
+	Total de faltas deve contar abonadas? Faltas abonadas reduzem do total
+	Colocar telefone no funci
+	Marcar trabalho externo
+	Consumo de hora extra vira "Horas compensadas"
