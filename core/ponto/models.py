@@ -259,7 +259,7 @@ class Funcionario(BaseModel):
         Caso não seja informado 'fim' será considerado o periodo até sua última
         entrada no sistema.
         """
-        saldo = self.tempo_esperado(inicio, fim) - self.tempo_trabalhado(inicio, fim)
+        saldo = self.tempo_trabalhado(inicio, fim) - self.tempo_esperado(inicio, fim)
         return saldo
 
     def faltas(self, inicio=None, fim=None):
