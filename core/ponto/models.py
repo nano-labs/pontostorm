@@ -11,6 +11,8 @@ from importador.models import le_planilha_funcionarios, le_planilha_ponto
 from utils.models import BaseModel, PermanentModel
 
 JORNADA_PADRAO = time(8, 0, 0)
+SALDO_LIMITE = {"min": -30 * 60,
+                "max": 30 * 60}
 
 
 def format_minutes(minutes):

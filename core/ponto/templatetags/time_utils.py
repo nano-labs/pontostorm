@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 
 from django import template
-from ponto.models import format_minutes
+from ponto.models import format_minutes, SALDO_LIMITE
 
 register = template.Library()
 
@@ -12,3 +12,17 @@ def to_time(value):
     if not value and not value == 0:
         return ""
     return format_minutes(int(value))
+
+
+@register.filter(name='alarm_color')
+def alarm_color(value):
+    u"""Retorna em rgb a cor do alarme de acordo com o saldo."""
+    value = int(value or 0)
+    cor = "rgba(255,0,0,%.1f)"
+    limite = SALDO_LIMITE["min"]
+    if value > 0:
+        cor = "rgba(0,255,0,%.1f)"
+        limite = SALDO_LIMITE["max"]
+
+    alfa = (value / float(limite))
+    return cor % alfa
