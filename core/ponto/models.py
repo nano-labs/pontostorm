@@ -2,13 +2,17 @@
 """Provavelmente o unico mudel do projeto."""
 from __future__ import unicode_literals
 
+import random
 from math import sqrt
 from datetime import datetime, time, timedelta
 from django.contrib.auth.models import User
 from django.db import models
+from django.core.validators import validate_email
+from django.utils.safestring import mark_safe
 
 from importador.models import le_planilha_funcionarios, le_planilha_ponto
 from utils.models import BaseModel, PermanentModel
+from utils.custom_email import TemplatedEmail
 
 JORNADA_PADRAO = time(8, 0, 0)
 SALDO_LIMITE = {"min": -30 * 60,
@@ -121,6 +125,50 @@ class Funcionario(BaseModel):
             f.departamento = get_departamento(funcionario["departamento"])
             f.save()
 
+    def checkup(self, inicio=None, fim=None):
+        u"""Verifica incongruências nos pontos, aplica faltas etc."""
+        pontos = self.pontos_filtrados(inicio, fim).order_by("dia")
+        inicio = inicio or self.primeiro_dia
+        fim = fim or self.ultimo_dia
+
+        pontos = {p.dia: p for p in pontos}
+        for d in xrange((fim - inicio).days):
+            dia = inicio + timedelta(days=d)
+            dia = dia.date()
+            ponto = pontos.get(dia)
+            if self.expediente_esperado(dia) > 0 and not ponto:
+                # Falta
+                Ponto.objects.create(funcionario=self, tipo=Ponto.FALTA,
+                                     dia=dia)
+                print dia, "Falta"
+            else:
+                print dia, ponto
+        # TODO: Verificar incongruencias
+
+    def set_email(self, email):
+        """Vincula o funcionario a um usuário django e define um email."""
+        try:
+            validate_email(email)
+        except Exception, e:
+            raise Exception(e[0])
+        if not self.usuario:
+            chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+            password = ''.join(random.choice(chars) for _ in range(8))
+            usuario = User.objects.create_user(username=self.pis,
+                                               email=email,
+                                               password=password)
+            self.usuario = usuario
+            self.save()
+        else:
+            self.usuario.email = email
+            self.usuario.save()
+        mensagem = """
+                   Olá %s,<br>
+                   Você pode acessar seu relatório de ponto em ENDEREÇO
+                   usando seus PIS, %s, como usuario e a senha %s""" % (
+                   self.nome, self.pis, password)
+        self.send_message(mark_safe(mensagem), "Usuário criado")
+
     @property
     def primeiro_dia(self):
         u"""Primeiro dia de ponto deste funcionário."""
@@ -136,7 +184,7 @@ class Funcionario(BaseModel):
     def send_message(self, message, subject=None):
         u"""Envia um email ao funcionário."""
         address = self.usuario.email
-        if not email:
+        if not address:
             raise Exception("Funcionario %s nao possui email cadastrado" %
                             self.nome)
         subject = u"[Clockwork Storm] %s" % subject
@@ -145,25 +193,6 @@ class Funcionario(BaseModel):
         template = "email_padrao.html"
         email = TemplatedEmail(address, subject, template, context)
         email.send()
-
-    def checkup(self, inicio=None, fim=None):
-        u"""Verifica incongruências nos pontos, aplica faltas etc."""
-        pontos = self.pontos_filtrados(inicio, fim).order_by("dia")
-        inicio = inicio or self.primeiro_dia
-        fim = fim or self.ultimo_dia
-
-        pontos = {p.dia: p for p in pontos}
-        for d in xrange((fim - inicio).days):
-            dia = inicio + timedelta(days=d)
-            ponto = pontos.get(dia)
-            if self.expediente_esperado(dia) > 0 and not ponto:
-                # Falta
-                Ponto.objects.create(funcionario=self, tipo=Ponto.FALTA,
-                                     dia=dia)
-                print dia, "Falta"
-            else:
-                print dia, ponto
-        # TODO: Verificar incongruencias
 
     def relatorio(self, inicio, fim):
         u"""Retorna todos os dados para o relatório deste funcionário."""
@@ -420,18 +449,24 @@ class Ponto(BaseModel):
                 funcionario.save()
 
                 entradas = f["entradas"]
+                pontos = []
                 for entrada in entradas:
                     if not any(entrada["entradas"]):
                         continue
-                    p = cls()
-                    p.funcionario = funcionario
-                    p.dia = entrada["dia"]
-                    p.save()
+                    p, created = cls.objects.get_or_create(funcionario=funcionario, dia=entrada["dia"])
+                    if not created:
+                        continue
+                    pontos.append(p)
                     for e in entrada["entradas"]:
                         if e:
                             Registro.objects.create(ponto=p, horario=e)
                     if p.registros.count() == 0:
                         p.delete()
+                pontos = [p for p in pontos if p]
+                if pontos:
+                    inicio = pontos[0].dia
+                    fim = pontos[-1].dia
+                    funcionario.checkup(inicio=inicio, fim=fim)
 
     @property
     def chegada(self):

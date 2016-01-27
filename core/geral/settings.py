@@ -17,6 +17,16 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 
+SITE_URL = ""
+EMAIL_FROM = 'Clockwork Storm <ponto@stormsec.com.br>'
+DEFAULT_FROM_EMAIL = EMAIL_FROM
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+if EMAIL_USE_TLS:
+    EMAIL_HOST_USER = 'ponto@stormsec.com.br'
+    EMAIL_HOST_PASSWORD = 'senha_do_email'
+    EMAIL_PORT = 587
+
 GRAPPELLI_ADMIN_TITLE = u"Clockwork Storm"
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -51,7 +61,7 @@ INSTALLED_APPS = (
 
     'geral',
     'utils',
-    'ponto'
+    'ponto',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -123,6 +133,7 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': (
                 "django.contrib.auth.context_processors.auth",
+                "django.template.context_processors.request",
                 "django.template.context_processors.debug",
                 "django.template.context_processors.i18n",
                 "django.template.context_processors.media",

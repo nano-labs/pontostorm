@@ -122,7 +122,7 @@
                         <td>{{entrada.ponto.get_tipo_display}}</td>
                         <td>{{entrada.ponto.expediente_trabalhado|to_time}}</td>
                         <td>{{entrada.ponto.extra|to_time}}</td>
-                        <td>{{entrada.saldo_periodo|to_time}}</td>
+                        <td style="background: {{entrada.saldo_periodo|alarm_color}}">{{entrada.saldo_periodo|to_time}}</td>
                         <td>{{entrada.faltas_periodo}}</td>
                         <td style="background: {{entrada.saldo_total|alarm_color}}">{{entrada.saldo_total|to_time}}</td>
                         <td>{{entrada.faltas_totais}}</td>

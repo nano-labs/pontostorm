@@ -1,0 +1,93 @@
+{% extends "ponto_base.html" %}
+{% load i18n grp_tags admin_urls admin_static admin_list time_utils %}
+
+{% block extrastyle %}
+<style type="text/css">
+    div.tudo {
+        width: 100%;
+    }
+    div.metade {
+        width: 45%;
+        float: left;
+        margin: 5px;
+        padding: 5px;
+        border: 1px solid #EEEEEE;
+    }
+    li {
+        list-style-type: circle;
+        margin-left: 15px;
+    }
+    div#modal {
+        position: relative;
+        left: 50%;
+        top: 30%;
+        padding: 20px;
+        margin-left: -200px;
+        width: 400px;
+        height: 100px;
+        background: #FFFFFF;
+    }
+    div#overlay {
+        visibility: hidden;
+        position: fixed;
+        left: 0px;
+        top: 0px;
+        width:100%;
+        height:100%;
+        text-align:center;
+        z-index: 1000;
+        background: rgba(0,0,0,0.5);
+/*        -webkit-filter: blur(5px);
+        -moz-filter: blur(5px);
+        -o-filter: blur(5px);
+        -ms-filter: blur(5px);
+        filter: blur(10px);*/
+    }
+</style>
+{% endblock %}
+
+{% block extrahead %}
+<script type="text/javascript">
+$(document).ready(function () {
+    $(".sem_email").on("click", function () {
+        var nome_funcionario = $(this).attr("data-funcionario-nome");
+        var id_funcionario = $(this).attr("data-funcionario-id");
+        $("#modal").find(".funcionario").text(nome_funcionario);
+        $("#modal").find(".id_funcionario").val(id_funcionario);
+        $("#overlay").css("visibility", "visible");
+        console.log($(this));
+    })
+})
+</script>
+{% endblock %}
+
+
+{% block content %}
+<div class="tudo">
+    <div class="metade">
+        <h1>Relatórios</h1>
+        <p>
+            <a href="{% url "funcionario" %}">Relatorio por funcionário</a>
+        </p>            
+    </div>
+        <div class="metade">
+        <h1>Pendências</h1>
+        <ul>
+            {% for f in pendencias.sem_email %}
+            <li><a class="sem_email" href="javascript:;" data-funcionario-id="{{f.id}}" data-funcionario-nome="{{f.nome}}"><span>{{f.nome|title}}</span></a> não possui endereço de email registrado</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+<div id="overlay">
+    <div id="modal">
+        <form action="{% url "definir_email" %}" method="POST">
+        {% csrf_token %}
+        <p>Definir email para <span class="funcionario"></span></p><br>
+        <input type="hidden" name="funcionario" class="id_funcionario">
+        <input type="email" name="email"><br><br>
+        <input type="submit" value="Salvar">
+        </form>
+    </div>
+</div>
+{% endblock %}
